@@ -55,11 +55,7 @@ async function connectToDatabase() {
   if (mongoose.connection.readyState === 1) return;
   try {
     await mongoose.connect(MONGO_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      // Fail fast if DB is unreachable to avoid long serverless timeouts
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 10000,
+        serverSelectionTimeoutMS: 5000,
     });
     console.log('Mongo connected');
   } catch (err) {
@@ -74,3 +70,4 @@ app.use((err, req, res, next) => {
 });
 
 module.exports = { app, connectToDatabase };
+
