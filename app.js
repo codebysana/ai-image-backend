@@ -39,6 +39,12 @@ app.use('/api/payments', paymentRoutes);
 // Health
 app.get('/api/ping', (req, res) => res.json({ ok: true }));
 
+// Fast response for favicon requests (prevents slow 404 handling in serverless)
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+
+// Root quick health check
+app.get('/', (req, res) => res.send('AI Image Backend')); 
+
 // Database helper for reuse across serverless invocations
 const MONGO_URI = process.env.MONGO_URI;
 async function connectToDatabase() {
@@ -51,11 +57,13 @@ async function connectToDatabase() {
     await mongoose.connect(MONGO_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
+      // Fail fast if DB is unreachable to avoid long serverless timeouts
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 10000,
     });
     console.log('Mongo connected');
   } catch (err) {
-    console.error('DB connect error', err);
-    throw err;
+    console.error('DB connect error', err && err.message ? err.message : err);
   }
 }
 
