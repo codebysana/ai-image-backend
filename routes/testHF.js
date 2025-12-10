@@ -4,7 +4,21 @@ const { InferenceClient } = require("@huggingface/inference");
 
 const HF_TOKEN = process.env.HF_TOKEN;
 const HF_MODEL = process.env.HF_MODEL || "black-forest-labs/FLUX.1-dev";
-const hf = new InferenceClient(HF_TOKEN);
+
+// Lazy / cached HF client to avoid blocking cold starts
+let _hfClient = null;
+function getHFClient() {
+  if (!HF_TOKEN) return null;
+  if (!_hfClient) {
+    try {
+      _hfClient = new InferenceClient(HF_TOKEN);
+    } catch (err) {
+      console.error('Failed to create HF client:', err && err.message ? err.message : err);
+      _hfClient = null;
+    }
+  }
+  return _hfClient;
+}
 
 // POST /api/test-hf
 router.post("/", async (req, res) => {
@@ -13,6 +27,9 @@ router.post("/", async (req, res) => {
 
   try {
     console.log("Calling HF with:", HF_MODEL, "Prompt:", prompt);
+
+    const hf = getHFClient();
+    if (!hf) return res.status(503).json({ message: 'Hugging Face token not configured' });
 
     // Call Hugging Face
     const imageBlob = await hf.textToImage({
